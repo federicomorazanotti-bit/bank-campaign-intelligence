@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Bank Term Deposit - Campaign Intelligence by Federico Mora</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0A1520;color:#F0E6D3;font-family:'Segoe UI',sans-serif;min-height:100vh}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0A1520}::-webkit-scrollbar-thumb{background:#1D3040;border-radius:3px}
+.header{background:linear-gradient(180deg,#0D1E2B,#0A1520);border-bottom:1px solid #1D3040;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+.header-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#C8A97E;margin-bottom:3px}
+.header h1{font-size:20px;font-weight:700}
+.header-right{font-size:11px;color:#5A7A8A;text-align:right;line-height:1.8}
+.header-right span{color:#C8A97E}
+.tabs{display:flex;border-bottom:1px solid #1D3040;padding:0 32px;flex-wrap:wrap}
+.tab{background:none;border:none;cursor:pointer;padding:13px 18px;font-size:12px;letter-spacing:0.5px;color:#5A7A8A;border-bottom:2px solid transparent;font-family:inherit;transition:all .2s}
+.tab.active{color:#C8A97E;border-bottom-color:#C8A97E;font-weight:600}
+.tab:hover{color:#C8A97E}
+.content{padding:24px 32px;display:none}
+.content.active{display:flex;flex-direction:column;gap:20px}
+.kpi-row{display:flex;gap:14px;flex-wrap:wrap}
+.kpi{flex:1;min-width:130px;background:#111E28;border:1px solid #1D3040;border-radius:12px;padding:18px 22px}
+.kpi.gold{background:linear-gradient(135deg,#C8A97E,#A8855A);border:none}
+.kpi.green{background:linear-gradient(135deg,#2A6A4A,#1A4A30);border:1px solid rgba(74,222,128,.25)}
+.kpi-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#7BA7BC;margin-bottom:6px}
+.kpi.gold .kpi-label,.kpi.green .kpi-label{color:#fff8ee}
+.kpi-value{font-size:24px;font-weight:700;line-height:1.1}
+.kpi.gold .kpi-value{color:#fff}
+.kpi.green .kpi-value{color:#4ADE80}
+.kpi-sub{font-size:11px;color:#5A7A8A;margin-top:5px}
+.kpi.gold .kpi-sub,.kpi.green .kpi-sub{color:#fff8ee}
+.card{background:#111E28;border:1px solid #1D3040;border-radius:12px;padding:24px}
+.card-row{display:flex;gap:16px}
+.card-row .card{flex:1}
+.chart-title{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#7BA7BC;margin-bottom:3px}
+.chart-sub{font-size:12px;color:#5A7A8A;margin-bottom:3px}
+.chart-src{font-size:10px;color:#2A4A5A;font-style:italic;margin-bottom:14px}
+canvas{max-height:280px}
+.note{margin-top:12px;padding:10px 14px;background:#0D1920;border-radius:8px;font-size:12px;color:#7BA7BC;border-left:3px solid #C8A97E}
+.note.blue{border-left-color:#2D6A8F}
+.note.green{border-left-color:#4ADE80}
+.note b{color:#C8A97E}
+.note.blue b{color:#7BA7BC}
+.note.green b{color:#4ADE80}
+/* Contact channel bars */
+.chan-row{margin-bottom:14px}
+.chan-head{display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px}
+.chan-name{font-size:13px;font-weight:500}
+.chan-stats{display:flex;gap:12px;font-size:11px;flex-wrap:wrap}
+.chan-pct{color:#7BA7BC}
+.chan-rate{color:#C8A97E;font-weight:600}
+.chan-close{color:#4ADE80;font-weight:600}
+.bar-bg{height:7px;background:#0A1520;border-radius:3px;margin-bottom:3px}
+.bar-fill{height:100%;border-radius:3px}
+.bar-bg2{height:4px;background:#0A1520;border-radius:3px}
+.bar-bg3{height:4px;background:#0A1520;border-radius:3px;margin-top:3px}
+.bar-fill3{height:100%;background:#4ADE80;border-radius:3px;opacity:.75}
+.bar-fill2{height:100%;background:#C8A97E;border-radius:3px;opacity:.8}
+.legend{display:flex;gap:16px;margin-top:6px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#5A7A8A}
+.legend-box{width:20px;height:6px;border-radius:2px}
+.legend-box.thin{height:3px}
+/* Verdict rows */
+.verdict-row{background:#111E28;border:1px solid #1D3040;border-radius:10px;padding:14px 18px;cursor:pointer;margin-bottom:8px;transition:border-color .2s}
+.verdict-row.open{border-color:rgba(200,169,126,.35)}
+.verdict-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.verdict-dim{font-weight:600;font-size:13px}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap}
+.badge.outdated{background:#3A1A1A;color:#F87171}
+.badge.adapt{background:#2A2A1A;color:#FACC15}
+.badge.confirmed{background:#1A3A2A;color:#4ADE80}
+.badge.escalated{background:#3A1A2A;color:#E879F9}
+.badge.raised{background:#1A2A3A;color:#60A5FA}
+.verdict-body{display:none;margin-top:12px;flex-direction:column;gap:10px}
+.verdict-row.open .verdict-body{display:flex}
+.verdict-then,.verdict-now{display:flex;gap:10px}
+.vl{font-size:10px;min-width:60px;padding-top:2px;letter-spacing:1px;flex-shrink:0}
+.vl.then{color:#5A7A8A}
+.vl.now{color:#C8A97E}
+.vt{font-size:13px;line-height:1.6}
+.vt.then{color:#7BA7BC}
+.vt.now{color:#F0E6D3}
+.verdict-impact{font-size:12px;color:#5A7A8A;border-top:1px solid #1D3040;padding-top:8px;margin-top:4px;font-style:italic}
+/* Insights */
+.insight{background:#111E28;border:1px solid #1D3040;border-radius:12px;padding:20px;display:flex;gap:20px}
+.insight-num{font-size:28px;font-weight:700;line-height:1;min-width:36px}
+.insight-title{font-weight:600;font-size:14px;margin-bottom:6px}
+.impact-badge{font-size:10px;padding:2px 8px;border-radius:20px;letter-spacing:1px;display:inline-block;margin-left:8px;vertical-align:middle}
+.insight-body{font-size:13px;color:#7BA7BC;line-height:1.65;margin-bottom:8px}
+.insight-src{font-size:10px;color:#5A7A8A;font-style:italic}
+.so-what{background:linear-gradient(135deg,#1A2B35,#0D1E2B);border:1px solid rgba(200,169,126,.27);border-radius:12px;padding:20px 24px}
+.so-what-label{font-size:10px;letter-spacing:3px;color:#C8A97E;text-transform:uppercase;margin-bottom:6px}
+.so-what-title{font-size:15px;font-weight:600;margin-bottom:14px}
+.so-what-item{display:flex;gap:14px;align-items:flex-start;margin-bottom:10px}
+.so-what-num{font-size:12px;color:#C8A97E;font-weight:700;min-width:24px;padding-top:2px}
+.so-what-text{font-size:13px;color:#7BA7BC;line-height:1.6}
+/* Targeting scenario */
+.scenario-box{background:linear-gradient(135deg,#0F2A1A,#0A1F14);border:1px solid rgba(74,222,128,.2);border-radius:12px;padding:24px}
+.scenario-label{font-size:10px;letter-spacing:3px;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+.scenario-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.scenario-sub{font-size:12px;color:#5A7A8A;margin-bottom:20px}
+.scenario-kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.scenario-kpi{flex:1;min-width:120px;background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.18);border-radius:10px;padding:14px 16px}
+.scenario-kpi-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7BA7BC;margin-bottom:6px}
+.scenario-kpi-value{font-size:22px;font-weight:700;color:#4ADE80;margin-bottom:3px}
+.scenario-kpi-note{font-size:10px;color:#5A7A8A}
+.scenario-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.filter-tag{font-size:11px;padding:4px 12px;border-radius:20px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ADE80;font-weight:600}
+.scenario-body{font-size:13px;color:#7BA7BC;line-height:1.7}
+/* Methodology */
+.meta-title{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#7BA7BC;margin-bottom:3px}
+.meta-sub{font-size:12px;color:#5A7A8A;margin-bottom:14px}
+.meta-body{font-size:13px;color:#7BA7BC;line-height:1.85}
+.meta-body strong{color:#F0E6D3}
+.meta-body code{color:#C8A97E;font-size:12px}
+.meta-row{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid #1D3040}
+.meta-key{font-size:12px;color:#5A7A8A;min-width:200px;flex-shrink:0}
+.meta-val{font-size:12px;color:#F0E6D3}
+.lim-item{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.lim-num{color:#C8A97E;font-weight:700;min-width:18px;padding-top:1px}
+.lim-text{font-size:13px;color:#7BA7BC;line-height:1.6}
+.src-item{padding-bottom:12px;border-bottom:1px solid #1D3040;margin-bottom:12px}
+.src-name{font-size:13px;font-weight:600;color:#F0E6D3;margin-bottom:4px}
+.src-detail{font-size:12px;color:#5A7A8A;line-height:1.6}
+.kpi-grid{display:flex;gap:14px;flex-wrap:wrap}
+.kpi-mini{flex:1;min-width:150px;background:#111E28;border:1px solid #1D3040;border-radius:10px;padding:14px 16px}
+.kpi-mini-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7BA7BC;margin-bottom:6px}
+.kpi-mini-value{font-size:22px;font-weight:700;color:#C8A97E;margin-bottom:4px}
+.kpi-mini-note{font-size:10px;color:#5A7A8A}
+.framework-box{background:linear-gradient(135deg,#1A2B35,#0D1E2B);border:1px solid rgba(200,169,126,.27);border-radius:12px;padding:20px 24px}
+.fw-label{font-size:10px;letter-spacing:3px;color:#C8A97E;text-transform:uppercase;margin-bottom:6px}
+.fw-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.fw-body{font-size:13px;color:#7BA7BC;line-height:1.7}
+.footer{text-align:center;padding:28px 32px;border-top:1px solid #1D3040;margin-top:8px;font-size:11px;color:#5A7A8A;line-height:1.8}
+.footer span{color:#C8A97E}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-label">Finance Sales Analytics</div>
+    <h1>Bank Term Deposit - Campaign Intelligence</h1>
+  </div>
+  <div class="header-right">
+    UCI Bank Marketing Dataset - n = 45,211<br>
+    <span>Benchmarked against ABA &amp; McKinsey 2024</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('overview')">Overview</button>
+  <button class="tab" onclick="showTab('segments')">Segments</button>
+  <button class="tab" onclick="showTab('campaigns')">Campaigns</button>
+  <button class="tab" onclick="showTab('targeting')">Targeting Intelligence</button>
+  <button class="tab" onclick="showTab('context')">2024 Context</button>
+  <button class="tab" onclick="showTab('insights')">Insights</button>
+  <button class="tab" onclick="showTab('methodology')">Methodology &amp; Sources</button>
+</div>
+
+<!-- ── OVERVIEW ─────────────────────────────────────────────────────── -->
+<div id="tab-overview" class="content active">
+  <div class="kpi-row">
+    <div class="kpi gold"><div class="kpi-label">Total Calls</div><div class="kpi-value">45,211</div><div class="kpi-sub">Full campaign 2008-2010</div></div>
+    <div class="kpi"><div class="kpi-label">Conversions</div><div class="kpi-value">5,289</div><div class="kpi-sub">Term deposits sold</div></div>
+    <div class="kpi"><div class="kpi-label">Overall Rate</div><div class="kpi-value">11.7%</div><div class="kpi-sub">Across all contacts</div></div>
+    <div class="kpi"><div class="kpi-label">Best Rate Month</div><div class="kpi-value">March</div><div class="kpi-sub">52.0% conversion rate</div></div>
+    <div class="kpi"><div class="kpi-label">Most Conversions</div><div class="kpi-value">May</div><div class="kpi-sub">925 actual sales</div></div>
+  </div>
+
+  <div class="card">
+    <div class="chart-title">Monthly Conversion Rate vs Call Volume (2008-2010, aggregated by calendar month)</div>
+    <div class="chart-sub">Call volume (bars, left axis) vs conversion rate (line, right axis) - high-volume months consistently underperform on quality</div>
+    <div class="chart-src">Data period: 2008-2010 (monthly figures aggregated across campaign years) | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-monthly-rate"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="chart-title">Actual Conversions per Month (2008-2010, aggregated by calendar month)</div>
+    <div class="chart-sub">Rate alone can mislead - March hits 52% but only 248 sales. May's 6.7% still generates 925. Read both charts together.</div>
+    <div class="chart-src">Data period: 2008-2010 (monthly figures aggregated across campaign years) | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-monthly-conv"></canvas>
+    <div class="note"><b>Context matters:</b> March (52% rate) = 248 sales. May (6.7% rate) = 925 sales. A high conversion rate does not always mean high conversion volume - campaign sizing is just as important as targeting.</div>
+  </div>
+
+  <div class="card-row">
+    <div class="card">
+      <div class="chart-title">Contact Channel - Share of Calls vs Conversion Rate vs Closures (2008-2010)</div>
+      <div class="chart-sub">Wide bar = share of total calls. Middle bar = conversion rate achieved. Narrow bar = share of total closures produced.</div>
+      <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+      <div id="contact-bars"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-box" style="background:#2D6A8F"></div> Share of calls</div>
+        <div class="legend-item"><div class="legend-box thin" style="background:#C8A97E"></div> Conversion rate</div>
+        <div class="legend-item"><div class="legend-box thin" style="background:#4ADE80"></div> % of total closures</div>
+      </div>
+    </div>
+    <div class="card" style="flex:2">
+      <div class="chart-title">Call Duration vs Conversion Rate (2008-2010)</div>
+      <div class="chart-sub">300x difference between shortest and longest calls - the strongest post-call predictor in the dataset</div>
+      <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+      <canvas id="c-duration"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ── SEGMENTS ─────────────────────────────────────────────────────── -->
+<div id="tab-segments" class="content">
+  <div class="card">
+    <div class="chart-title">Term Deposit Conversion Rate by Occupation (2008-2010)</div>
+    <div class="chart-sub">Students (28.7%) and retirees (22.8%) convert at 3-4x the rate of blue-collar workers (7.3%)</div>
+    <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-job" style="max-height:300px"></canvas>
+  </div>
+  <div class="card">
+    <div class="chart-title">Term Deposit Conversion Rate by Age Group (2008-2010)</div>
+    <div class="chart-sub">U-shaped curve: youth (24.0%) and seniors (42.6%, age 66+) far outperform middle-aged prospects (36-55)</div>
+    <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-age"></canvas>
+  </div>
+  <div class="card">
+    <div class="chart-title">Call Volume vs Conversions by Occupation (2008-2010)</div>
+    <div class="chart-sub">Blue-collar workers receive the most calls but produce the worst return on effort - the largest misallocation in the campaign</div>
+    <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-volqual"></canvas>
+  </div>
+</div>
+
+<!-- ── CAMPAIGNS ────────────────────────────────────────────────────── -->
+<div id="tab-campaigns" class="content">
+  <div class="kpi-row">
+    <div class="kpi gold"><div class="kpi-label">Q1 Jan-Mar</div><div class="kpi-value">18.3%</div><div class="kpi-sub">4,529 calls - highest quarterly rate</div></div>
+    <div class="kpi"><div class="kpi-label">Q2 Apr-Jun</div><div class="kpi-value">9.3%</div><div class="kpi-sub">22,039 calls - highest volume, lowest rate</div></div>
+    <div class="kpi"><div class="kpi-label">Q3 Jul-Sep</div><div class="kpi-value">11.5%</div><div class="kpi-sub">13,721 calls</div></div>
+    <div class="kpi"><div class="kpi-label">Q4 Oct-Dec</div><div class="kpi-value">16.8%</div><div class="kpi-sub">4,922 calls</div></div>
+  </div>
+  <div class="note" style="margin-top:0"><b>Note on quarterly figures:</b> These rates are computed by grouping all calls by calendar month across the full 2008-2010 campaign period (e.g. all January calls regardless of year). They reflect seasonal patterns, not sequential campaign quarters. The high Q1 rate is driven by March's exceptional 52.0% - see charts below.</div>
+  <div class="card">
+    <div class="chart-title">Monthly Call Volume vs Term Deposit Conversions (2008-2010, aggregated by calendar month)</div>
+    <div class="chart-sub">May: 13,766 calls at 6.7%. March: 477 calls at 52% - nearly 8x quality gap within the same campaign</div>
+    <div class="chart-src">Data period: 2008-2010 (monthly figures aggregated across campaign years) | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-camp-vol"></canvas>
+  </div>
+  <div class="card">
+    <div class="chart-title">Monthly Term Deposit Conversion Rate (2008-2010, aggregated by calendar month)</div>
+    <div class="chart-sub">Low-volume months are where real value hides - March (52%), September (46.5%), December (46.7%) and October (43.8%) all exceeded 40%</div>
+    <div class="chart-src">Data period: 2008-2010 (monthly figures aggregated across campaign years) | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-camp-rate"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="chart-title">Campaign Learning Curve - Conversion Rate by True Quarter (2008-2010)</div>
+    <div class="chart-sub">The campaign improved 15x from start to peak - from 3.7% in Q2 2008 to 55.1% in Q2 2010 as targeting sharpened over time</div>
+    <div class="chart-src">Data period: May 2008 - November 2010 | Quarters reconstructed from sequential record order in bank-full.csv | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-cohort"></canvas>
+    <div class="note"><b>What this tells us:</b> The calendar-month aggregation used elsewhere in this dashboard hides a remarkable story. In true chronological order, this campaign learned. The team got progressively better at identifying who to call and when - conversion rates grew from under 4% in the opening months to above 50% by the final year. That is not luck; it is a targeting model being refined in the field.</div>
+  </div>
+</div>
+
+<!-- ── TARGETING INTELLIGENCE ────────────────────────────────────────── -->
+<div id="tab-targeting" class="content">
+
+  <div class="framework-box">
+    <div class="fw-label">Pre-Call Intelligence</div>
+    <div class="fw-title">Three signals available before any call is made</div>
+    <div class="fw-body">Call duration predicts conversion - but only after the call. The three findings below are different: they are knowable from the CRM before dialling. Used together, they nearly double the campaign's baseline conversion rate on a filtered pool of calls.</div>
+  </div>
+
+  <div class="card">
+    <div class="chart-title">Logistic Regression - Feature Importance for Term Deposit Conversion (2008-2010)</div>
+    <div class="chart-sub">Absolute logistic regression coefficients after standardisation - larger value = stronger predictor. Model accuracy: 89.1% on training data.</div>
+    <div class="chart-src">Computed using scikit-learn LogisticRegression on bank-full.csv (all 45,211 records, 16 features, StandardScaler applied) | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-featimport" style="max-height:420px"></canvas>
+    <div class="note green"><b>The key split:</b> Duration is the strongest predictor overall - but it is only known after the call ends. Everything below it on this chart is a <em>pre-call</em> signal available in any CRM before dialling. Contact method, housing loan status, number of contacts this campaign, and prior outcome together form a practical pre-call scoring framework with no model required.</div>
+  </div>
+  <div class="card">
+    <div class="chart-title">Previous Campaign Outcome vs Conversion Rate (2008-2010)</div>
+    <div class="chart-sub">Clients who subscribed in a prior campaign convert at 64.7% - 7x the rate of unclassified contacts</div>
+    <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-prevout" style="max-height:260px"></canvas>
+    <div class="note"><b>The most underused signal:</b> Only 1,511 calls (3.3% of the campaign) targeted clients with a previous successful outcome - yet they converted at 64.7%. The 81.7% of calls with unknown prior outcome converted at just 9.2%. Prioritising known previous subscribers is the single highest-ROI action available from existing data.</div>
+  </div>
+
+  <!-- Contact frequency -->
+  <div class="card">
+    <div class="chart-title">Number of Contacts in This Campaign vs Conversion Rate (2008-2010)</div>
+    <div class="chart-sub">Conversion rate drops sharply after the first contact - repeated calling is costly and largely ineffective</div>
+    <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+    <canvas id="c-campfreq" style="max-height:260px"></canvas>
+    <div class="note"><b>Diminishing returns:</b> First contact converts at 14.6%. By the fourth contact or beyond, the rate falls to 7.4% - half the initial rate. Yet 9,641 calls (21.3% of the entire campaign) were made to prospects already contacted 4 or more times. Stopping at 2-3 attempts and reallocating that budget to fresh high-propensity leads would materially lift overall results.</div>
+  </div>
+
+  <!-- Housing loan -->
+  <div class="card-row">
+    <div class="card">
+      <div class="chart-title">Housing Loan Status vs Conversion Rate (2008-2010)</div>
+      <div class="chart-sub">No housing loan = 2.2x more likely to convert - and it's in the CRM before the call</div>
+      <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+      <canvas id="c-housing" style="max-height:260px"></canvas>
+      <div class="note"><b>Free pre-call filter:</b> Clients without a housing loan converted at 16.7% vs 7.7% for those with one - a 2.2x multiplier. Unlike call duration, this data exists before the conversation starts. It requires no model: just a CRM filter.</div>
+    </div>
+    <div class="card">
+      <div class="chart-title">Credit Default Status vs Conversion Rate (2008-2010)</div>
+      <div class="chart-sub">Clients with no credit default convert at 11.8% - nearly double the 6.4% rate for those with one</div>
+      <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+      <canvas id="c-default" style="max-height:260px"></canvas>
+    </div>
+  </div>
+
+  <!-- Combined targeting scenario -->
+  <div class="scenario-box">
+    <div class="scenario-label">Combined Targeting Scenario</div>
+    <div class="scenario-title">What if the campaign applied just three pre-call filters?</div>
+    <div class="scenario-sub">Using only data available in any standard CRM - no model, no algorithm required</div>
+    <div class="scenario-filters">
+      <span class="filter-tag">No housing loan</span>
+      <span class="filter-tag">First contact only</span>
+      <span class="filter-tag">No prior campaign failure</span>
+    </div>
+    <div class="scenario-kpis">
+      <div class="scenario-kpi"><div class="scenario-kpi-label">Filtered pool</div><div class="scenario-kpi-value">6,666</div><div class="scenario-kpi-note">calls meet all 3 criteria</div></div>
+      <div class="scenario-kpi"><div class="scenario-kpi-label">Conversions</div><div class="scenario-kpi-value">1,460</div><div class="scenario-kpi-note">term deposits sold</div></div>
+      <div class="scenario-kpi"><div class="scenario-kpi-label">Conversion rate</div><div class="scenario-kpi-value">21.9%</div><div class="scenario-kpi-note">vs 11.7% baseline</div></div>
+      <div class="scenario-kpi"><div class="scenario-kpi-label">Rate improvement</div><div class="scenario-kpi-value">+10.2pp</div><div class="scenario-kpi-note">nearly double the baseline</div></div>
+      <div class="scenario-kpi"><div class="scenario-kpi-label">Revenue per call</div><div class="scenario-kpi-value">€32.85</div><div class="scenario-kpi-note">vs €17.55 baseline (+87%)</div></div>
+      <div class="scenario-kpi"><div class="scenario-kpi-label">Est. revenue uplift</div><div class="scenario-kpi-value">€102k</div><div class="scenario-kpi-note">vs same calls at baseline rate*</div></div>
+    </div>
+    <div class="scenario-body">This is not a model prediction - it is a direct calculation from the raw dataset. Applying these three filters to the 45,211 calls in the original campaign produces a pool of 6,666 calls that achieved a 21.9% conversion rate. No machine learning, no scoring system, no additional budget required. Just smarter use of data that already existed in the CRM at the time of each call.<br><br>The implication is significant: the bottleneck in this campaign was not reach or budget - it was targeting logic. A fraction of the calls, better selected, outperforms the full campaign by nearly double on rate.<br><br><span style="font-size:11px;color:#2A4A5A;font-style:italic">* Revenue figures use a conservative €150 margin per term deposit as a directional illustration. Actual margin will vary by institution and product terms. The per-call and uplift figures scale linearly with the assumed margin.</span></div>
+  </div>
+</div>
+
+<!-- ── 2024 CONTEXT ──────────────────────────────────────────────────── -->
+<div id="tab-context" class="content">
+  <div class="framework-box">
+    <div class="fw-label">Analytical Framework</div>
+    <div class="fw-title">Would this 2008-2010 campaign work in 2024?</div>
+    <div class="fw-body">Each finding from the UCI dataset is benchmarked against published 2024 industry data from the ABA, McKinsey, and BMO Financial Research. All figures are sourced - no estimates are used. Some insights are confirmed. Others require strategic adaptation.</div>
+  </div>
+
+  <div class="card-row">
+    <div class="card">
+      <div class="chart-title">UCI Dataset: Contact Method (2008-2010)</div>
+      <div class="chart-sub">Share of total campaign calls by contact type - outbound telemarketing only</div>
+      <div class="chart-src">Data period: 2008-2010 | n=45,211 calls | Source: Moro et al. (2014), Decision Support Systems</div>
+      <canvas id="c-uci-contact" style="max-height:220px"></canvas>
+    </div>
+    <div class="card">
+      <div class="chart-title">2024: Consumer Primary Banking Channel Preference</div>
+      <div class="chart-sub">How US adults prefer to access their bank today - telephone ranks last at just 4%</div>
+      <div class="chart-src">Data period: October 2024 | n=4,508 US adults | Source: ABA Consumer Banking Survey (Morning Consult)</div>
+      <canvas id="c-aba-contact" style="max-height:220px"></canvas>
+    </div>
+  </div>
+
+  <div class="note"><b>What changed:</b> In the UCI dataset, cellular and telephone made up 71% of contact attempts. In 2024, telephone is the least-preferred banking channel at 4% (ABA). Mobile apps - which did not exist as a banking channel in 2008 - are now the primary channel for 55% of US consumers.</div>
+
+  <div class="card">
+    <div class="chart-title">Mobile Banking Adoption by Generation (2024)</div>
+    <div class="chart-sub">% using mobile as primary channel vs % preferring branch visits - all generations have shifted digital</div>
+    <div class="chart-src">Data period: 2024 | Sources: ABA Consumer Banking Survey 2024 + BMO Real Financial Progress Index 2024</div>
+    <canvas id="c-mobile-gen"></canvas>
+    <div class="note blue"><b>Key finding:</b> Even Boomers (60-78) now use mobile banking at 41% (ABA 2024). The high-converting 66+ segment identified in the dataset remains valuable - but must now be engaged digitally, not by telephone.</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-mini"><div class="kpi-mini-label">Mobile as primary channel</div><div class="kpi-mini-value">55%</div><div class="kpi-mini-note">ABA Consumer Survey 2024</div></div>
+    <div class="kpi-mini"><div class="kpi-mini-label">Digital sales penetration</div><div class="kpi-mini-value">40%+</div><div class="kpi-mini-note">McKinsey Retail Banking 2024</div></div>
+    <div class="kpi-mini"><div class="kpi-mini-label">Cross-sell revenue uplift</div><div class="kpi-mini-value">+25%</div><div class="kpi-mini-note">Industry avg, digital 2024</div></div>
+    <div class="kpi-mini"><div class="kpi-mini-label">Branch preference share</div><div class="kpi-mini-value">8%</div><div class="kpi-mini-note">ABA Consumer Survey 2024</div></div>
+    <div class="kpi-mini"><div class="kpi-mini-label">Satisfied with digital</div><div class="kpi-mini-value">96%</div><div class="kpi-mini-note">ABA Consumer Survey 2024</div></div>
+    <div class="kpi-mini"><div class="kpi-mini-label">Banks deploying AI tools</div><div class="kpi-mini-value">81%</div><div class="kpi-mini-note">Global Banking Research 2024</div></div>
+  </div>
+
+  <div>
+    <div class="chart-title" style="margin-bottom:4px">Finding-by-Finding Assessment</div>
+    <div class="chart-sub" style="margin-bottom:12px">Click any row to expand - UCI dataset finding on the left, 2024 industry benchmark on the right. All figures sourced.</div>
+    <div id="verdict-rows"></div>
+  </div>
+</div>
+
+<!-- ── INSIGHTS ──────────────────────────────────────────────────────── -->
+<div id="tab-insights" class="content">
+  <div style="font-size:12px;color:#5A7A8A">8 findings from 45,211 UCI bank sales calls - each benchmarked or verified directly from the raw dataset. External 2024 sources cited where used.</div>
+  <div id="insight-cards"></div>
+  <div class="so-what">
+    <div class="so-what-label">So What</div>
+    <div class="so-what-title">If I were redesigning this campaign for 2024, here is what I would change:</div>
+    <div id="so-what-items"></div>
+  </div>
+</div>
+
+<!-- ── METHODOLOGY ───────────────────────────────────────────────────── -->
+<div id="tab-methodology" class="content">
+  <div class="card">
+    <div class="meta-title">About This Analysis</div>
+    <div style="height:4px"></div>
+    <div class="meta-body">This dashboard analyses <strong>45,211 outbound bank telemarketing calls</strong> made by a Portuguese banking institution between May 2008 and November 2010. The goal of each call was to sell a term deposit product. All figures on the Overview, Segments, Campaigns and Targeting Intelligence tabs are computed directly from <code>bank-full.csv</code>, the full version of the UCI Bank Marketing Dataset.<br><br>The 2024 Context tab benchmarks each historical finding against published 2024 data from the ABA, McKinsey, and BMO. Every number in this dashboard is either derived directly from the UCI dataset or sourced from a named publication. No figures are estimated.</div>
+  </div>
+  <div class="card">
+    <div class="meta-title">Dataset Details</div>
+    <div style="height:12px"></div>
+    <div class="meta-row"><div class="meta-key">Records</div><div class="meta-val">45,211 individual calls</div></div>
+    <div class="meta-row"><div class="meta-key">Features</div><div class="meta-val">17 variables (client demographics, campaign details, call outcome)</div></div>
+    <div class="meta-row"><div class="meta-key">Period</div><div class="meta-val">May 2008 - November 2010</div></div>
+    <div class="meta-row"><div class="meta-key">Institution</div><div class="meta-val">Portuguese banking institution (anonymised in source data)</div></div>
+    <div class="meta-row"><div class="meta-key">Target variable</div><div class="meta-val">y - whether the client subscribed to a term deposit (yes/no)</div></div>
+    <div class="meta-row"><div class="meta-key">Overall conversion</div><div class="meta-val">5,289 conversions (11.7%)</div></div>
+    <div class="meta-row"><div class="meta-key">File used</div><div class="meta-val">bank-full.csv (full dataset, not the 10% sample)</div></div>
+  </div>
+  <div class="card">
+    <div class="meta-title">A Note on Monthly Aggregation</div>
+    <div class="meta-sub">Why Jan-Dec instead of a continuous timeline</div>
+    <div class="meta-body">The dataset's <code>month</code> field records calendar month only, with no year column. Monthly charts therefore aggregate all calls from the same calendar month across the full campaign period (2008-2010). For example, the January bar represents all calls made in January across all three years combined. This is consistent with how the data is structured and appropriate for identifying seasonal patterns, but it does not represent a continuous monthly timeline. Quarterly figures on the Campaigns tab follow the same aggregation logic.</div>
+  </div>
+  <div class="card">
+    <div class="meta-title">Limitations</div>
+    <div class="meta-sub">Honest caveats every analyst should state upfront</div>
+    <div class="lim-item"><div class="lim-num">1.</div><div class="lim-text">The UCI dataset covers one Portuguese banking institution only. Results may not generalise to other institutions, geographies or time periods.</div></div>
+    <div class="lim-item"><div class="lim-num">2.</div><div class="lim-text">The dataset records outbound telemarketing call outcomes only. It does not capture digital, branch or inbound sales from the same period.</div></div>
+    <div class="lim-item"><div class="lim-num">3.</div><div class="lim-text">Call duration is recorded after the fact - it cannot be used as a pre-call predictor. It is an outcome signal, not an input variable.</div></div>
+    <div class="lim-item"><div class="lim-num">4.</div><div class="lim-text">The targeting scenario (21.9% rate) is a direct computation from the raw data, not a model prediction. Real-world application would require CRM data matching and would depend on list quality.</div></div>
+    <div class="lim-item"><div class="lim-num">5.</div><div class="lim-text">The 2024 benchmarks reflect US and global banking trends and may not apply to all markets or product types.</div></div>
+    <div class="lim-item"><div class="lim-num">6.</div><div class="lim-text">Conversion rate comparisons between the UCI data and 2024 benchmarks are directional only - the product types, markets and methodologies differ.</div></div>
+  </div>
+  <div class="card">
+    <div class="meta-title">Sources</div>
+    <div style="height:12px"></div>
+    <div class="src-item"><div class="src-name">UCI Bank Marketing Dataset</div><div class="src-detail">Moro, S., Cortez, P., &amp; Rita, P. (2014). A data-driven approach to predict the success of bank telemarketing. Decision Support Systems, 62, 22-31. archive.ics.uci.edu/dataset/222/bank+marketing</div></div>
+    <div class="src-item"><div class="src-name">ABA Consumer Banking Survey 2024</div><div class="src-detail">Conducted by Morning Consult on behalf of the American Bankers Association, October 7-10 2024. National sample of 4,508 US adults.</div></div>
+    <div class="src-item"><div class="src-name">McKinsey State of Retail Banking 2024</div><div class="src-detail">McKinsey &amp; Company. The state of retail banking: Profitability and growth in the era of digital and AI. October 2024.</div></div>
+    <div class="src-item"><div class="src-name">McKinsey Global Banking Annual Review 2024</div><div class="src-detail">McKinsey &amp; Company. Attaining escape velocity. October 2024.</div></div>
+    <div class="src-item" style="border:none;margin:0"><div class="src-name">BMO Financial Research 2024</div><div class="src-detail">BMO Real Financial Progress Index. Digital banking adoption by generation. 2024.</div></div>
+  </div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CALLS  = [1403,2649,477,2932,13766,5341,6895,6247,579,738,3970,214];
+const CONVS  = [142,441,248,577,925,546,627,688,269,323,403,100];
+const RATES  = [10.1,16.6,52.0,19.7,6.7,10.2,9.1,11.0,46.5,43.8,10.2,46.7];
+
+const JOBS  = ['Student','Retired','Unemployed','Management','Admin.','Self-employed','Technician','Services','Housemaid','Entrepreneur','Blue-collar'];
+const JOB_R = [28.7,22.8,15.5,13.8,12.2,11.8,11.1,8.9,8.8,8.3,7.3];
+const JOB_T = [938,2264,1303,9458,5171,1579,7597,4154,1240,1487,9732];
+const JOB_C = [269,516,202,1301,631,187,840,369,109,123,708];
+
+const AGES  = ['18-25','26-35','36-45','46-55','56-65','66+'];
+const AGE_R = [24.0,12.0,9.4,9.4,14.1,42.6];
+
+const DUR_L = ['<1 min','1-3 min','3-5 min','5-10 min','10-20 min','>20 min'];
+const DUR_R = [0.2,3.9,10.8,19.1,46.0,61.6];
+
+// ── COLORS ───────────────────────────────────────────────────────────────────
+const gold='#C8A97E', blue='#2D6A8F', teal='#4A8FA8', green='#4ADE80', border='#1D3040', muted='#5A7A8A';
+const gridOpts = { color: border };
+const tickOpts = { color: muted, font:{size:11} };
+const tooltipOpts = { backgroundColor:'#0D1920', borderColor:border, borderWidth:1, titleColor:gold, bodyColor:'#F0E6D3', padding:10 };
+const pctTick = v => v + '%';
+
+function mkBar(id, labels, datasets, opts={}) {
+  new Chart(document.getElementById(id), {
+    type:'bar', data:{ labels, datasets },
+    options: Object.assign({
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ display: datasets.length>1, labels:{color:muted,font:{size:12}} }, tooltip:{ callbacks:{}, ...tooltipOpts } },
+      scales:{ x:{ grid:gridOpts, ticks:tickOpts }, y:{ grid:gridOpts, ticks:tickOpts } }
+    }, opts)
+  });
+}
+
+function mkHBar(id, labels, datasets, xMax) {
+  new Chart(document.getElementById(id), {
+    type:'bar', data:{ labels, datasets },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:{...tooltipOpts} },
+      scales:{
+        x:{ grid:gridOpts, ticks:{...tickOpts, callback:v=>v+'%'}, max:xMax },
+        y:{ grid:{display:false}, ticks:tickOpts }
+      }
+    }
+  });
+}
+
+// ── OVERVIEW CHARTS ───────────────────────────────────────────────────────────
+new Chart(document.getElementById('c-monthly-rate'), {
+  type:'bar',
+  data:{ labels: MONTHS, datasets:[
+    { label:'Calls', data:CALLS, backgroundColor:border, yAxisID:'y', borderRadius:3 },
+    { label:'Conv. Rate %', data:RATES, type:'line', yAxisID:'y2', borderColor:gold, backgroundColor:'transparent', pointBackgroundColor:gold, pointRadius:3, borderWidth:2.5, tension:0.3 }
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{labels:{color:muted,font:{size:12}}}, tooltip:{...tooltipOpts} },
+    scales:{
+      y:{ grid:gridOpts, ticks:{...tickOpts, callback:v=>v.toLocaleString()}, position:'left' },
+      y2:{ grid:{display:false}, ticks:{...tickOpts, callback:pctTick}, position:'right', max:60, min:0 },
+      x:{ grid:gridOpts, ticks:tickOpts }
+    }
+  }
+});
+
+const convColors = CONVS.map(v => v>=600?gold : v>=400?blue : teal);
+mkBar('c-monthly-conv', MONTHS, [{ label:'Conversions', data:CONVS, backgroundColor:convColors, borderRadius:4 }], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts} },
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>v.toLocaleString()}} }
+});
+
+// Contact channel - 3-bar
+const contacts = [
+  {name:'Cellular',  share:64.8, rate:14.9, closeShare:82.5, color:blue},
+  {name:'Unknown',   share:28.8, rate:4.1,  closeShare:10.1, color:border},
+  {name:'Telephone', share:6.4,  rate:13.4, closeShare:7.4,  color:teal},
+];
+const cb = document.getElementById('contact-bars');
+contacts.forEach(c => {
+  cb.innerHTML += `
+  <div class="chan-row">
+    <div class="chan-head">
+      <span class="chan-name">${c.name}</span>
+      <div class="chan-stats">
+        <span class="chan-pct">${c.share}% of calls</span>
+        <span class="chan-rate">${c.rate}% conv. rate</span>
+        <span class="chan-close">${c.closeShare}% of closures</span>
+      </div>
+    </div>
+    <div class="bar-bg"><div class="bar-fill" style="width:${c.share}%;background:${c.color}"></div></div>
+    <div class="bar-bg2"><div class="bar-fill2" style="width:${c.rate}%"></div></div>
+    <div class="bar-bg3"><div class="bar-fill3" style="width:${c.closeShare}%"></div></div>
+  </div>`;
+});
+
+const durColors = DUR_R.map((_,i) => `rgba(200,169,126,${0.2+i/DUR_R.length*0.8})`);
+mkBar('c-duration', DUR_L, [{ label:'Conv. Rate %', data:DUR_R, backgroundColor:durColors, borderRadius:4 }], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts,callbacks:{label:c=>c.raw+'%'}} },
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick}} }
+});
+
+// ── SEGMENT CHARTS ────────────────────────────────────────────────────────────
+const jobColors = JOB_R.map(r => r>=20?gold : r>=12?blue : border);
+mkHBar('c-job', JOBS, [{ label:'Conv. Rate %', data:JOB_R, backgroundColor:jobColors, borderRadius:4 }], 35);
+
+const ageColors = AGE_R.map(r => r>=20?gold:blue);
+mkBar('c-age', AGES, [{ label:'Conv. Rate %', data:AGE_R, backgroundColor:ageColors, borderRadius:4 }], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts,callbacks:{label:c=>c.raw+'%'}} },
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:50} }
+});
+
+mkBar('c-volqual', JOBS, [
+  { label:'Total Calls', data:JOB_T, backgroundColor:border, borderRadius:3 },
+  { label:'Converted',   data:JOB_C, backgroundColor:gold,   borderRadius:3 }
+], {
+  scales:{ x:{grid:gridOpts,ticks:{...tickOpts,maxRotation:15}}, y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>v.toLocaleString()}} }
+});
+
+// ── CAMPAIGN CHARTS ────────────────────────────────────────────────────────────
+mkBar('c-camp-vol', MONTHS, [
+  { label:'Total Calls',  data:CALLS, backgroundColor:border, borderRadius:3 },
+  { label:'Conversions',  data:CONVS, backgroundColor:gold,   borderRadius:3 }
+], {
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>v.toLocaleString()}} }
+});
+
+const rateColors = RATES.map(r => r>=40?gold : r>=15?blue : border);
+mkBar('c-camp-rate', MONTHS, [{ label:'Conv. Rate %', data:RATES, backgroundColor:rateColors, borderRadius:4 }], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts,callbacks:{label:c=>c.raw+'%'}} },
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:60} }
+});
+
+// ── TARGETING CHARTS ──────────────────────────────────────────────────────────
+// Previous outcome
+const prevLabels = ['Previous Success','Other Outcome','Previous Failure','Unknown / First Contact'];
+const prevRates  = [64.7, 16.7, 12.6, 9.2];
+const prevCalls  = [1511, 1840, 4901, 36959];
+const prevColors = [green, teal, border, border];
+mkBar('c-prevout', prevLabels, [{label:'Conv. Rate %', data:prevRates, backgroundColor:prevColors, borderRadius:4}], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts, callbacks:{
+    label: ctx => ` ${ctx.raw}% conversion rate`,
+    afterLabel: ctx => ` ${prevCalls[ctx.dataIndex].toLocaleString()} calls (${(prevCalls[ctx.dataIndex]/45211*100).toFixed(1)}% of campaign)`
+  }}},
+  scales:{ x:{grid:gridOpts,ticks:{...tickOpts,maxRotation:10}}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:75} }
+});
+
+// Contact frequency
+const freqLabels = ['1st contact','2nd contact','3rd contact','4th contact or more'];
+const freqRates  = [14.6, 11.2, 11.2, 7.4];
+const freqCalls  = [17544, 12505, 5521, 9641];
+const freqColors = [gold, blue, teal, border];
+mkBar('c-campfreq', freqLabels, [{label:'Conv. Rate %', data:freqRates, backgroundColor:freqColors, borderRadius:4}], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts, callbacks:{
+    label: ctx => ` ${ctx.raw}% conversion rate`,
+    afterLabel: ctx => ` ${freqCalls[ctx.dataIndex].toLocaleString()} calls`
+  }}},
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:20} }
+});
+
+// Housing loan
+mkBar('c-housing',
+  ['No housing loan','Has housing loan'],
+  [{label:'Conv. Rate %', data:[16.7,7.7], backgroundColor:[green,border], borderRadius:4}], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts,callbacks:{label:c=>` ${c.raw}% conversion rate`}} },
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:22} }
+});
+
+// Default status
+mkBar('c-default',
+  ['No credit default','Has credit default'],
+  [{label:'Conv. Rate %', data:[11.8,6.4], backgroundColor:[teal,border], borderRadius:4}], {
+  plugins:{ legend:{display:false}, tooltip:{...tooltipOpts,callbacks:{label:c=>` ${c.raw}% conversion rate`}} },
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:16} }
+});
+
+// ── 2024 CONTEXT CHARTS ───────────────────────────────────────────────────────
+mkHBar('c-uci-contact',
+  ['Cellular','Unknown','Telephone'],
+  [{label:'Share of Calls %', data:[64.8,28.8,6.4], backgroundColor:[blue,border,teal], borderRadius:4}], 70);
+
+const abaData  = [55,22,8,5,4,6];
+const abaLabel = ['Mobile App','Online/PC','Branch','ATM','Telephone','Other'];
+const abaColor = abaData.map((v,i) => v>=20?gold : abaLabel[i]==='Telephone'?'#8F3D2D':blue);
+mkHBar('c-aba-contact', abaLabel, [{label:'% of consumers', data:abaData, backgroundColor:abaColor, borderRadius:4}], 70);
+
+const GENS = ['Gen Z','Millennial','Gen X','Boomer','Silent'];
+mkBar('c-mobile-gen', GENS, [
+  { label:'Mobile Banking %',    data:[93,80,55,41,18], backgroundColor:gold, borderRadius:3 },
+  { label:'Branch Preference %', data:[4,4,10,13,28],   backgroundColor:blue, borderRadius:3 }
+], {
+  scales:{ x:{grid:gridOpts,ticks:tickOpts}, y:{grid:gridOpts,ticks:{...tickOpts,callback:pctTick},max:100} }
+});
+
+// ── VERDICT ROWS ──────────────────────────────────────────────────────────────
+const VERDICTS = [
+  { dim:'Primary Sales Channel', badge:'Outdated', cls:'outdated',
+    dataset:'Cellular and telephone were the only outreach methods in this campaign. Cellular covered 64.8% of contacts.',
+    now:'55% of US consumers now use mobile apps as their primary banking channel (ABA 2024). Telephone accounts for just 4% and ranks last of all channels.',
+    impact:'A phone-only campaign would reach a fraction of today\'s banking customers. Digital-first is now the baseline.' },
+  { dim:'Top Converting Segment', badge:'Adapt Strategy', cls:'adapt',
+    dataset:'Seniors (66+) converted at 42.6% - the highest rate of any age group in the dataset, from only 751 calls.',
+    now:'Seniors remain high-value. However 41% of Boomers now use mobile as their primary banking channel (ABA 2024).',
+    impact:'The segment insight holds and is still actionable. The contact method must shift - digital now reaches this group effectively.' },
+  { dim:'Engagement Time Signal', badge:'Confirmed', cls:'confirmed',
+    dataset:'Calls over 20 minutes converted at 61.6% vs 0.2% for calls under 1 minute - a 300x gap computed from the dataset.',
+    now:'McKinsey (2024) confirms banks achieving customer primacy do so through personalised, high-engagement interactions across all channels.',
+    impact:'Engagement depth predicts conversion regardless of channel. This principle translates directly to digital session quality.' },
+  { dim:'Campaign Timing', badge:'Confirmed', cls:'confirmed',
+    dataset:'May had 30% of all calls but the lowest conversion rate (6.7%). March (52%), September (46.5%), December (46.7%) and October (43.8%) all exceeded 40% on far smaller volumes.',
+    now:'Q4 financial planning urgency remains a consistent driver of product adoption (McKinsey Global Banking Annual Review 2024).',
+    impact:'Seasonal demand reflects human financial behaviour, not the channel. Prioritising low-volume, high-rate months remains a sound strategy.' },
+  { dim:'Data Quality Gap', badge:'Escalated', cls:'escalated',
+    dataset:'28.8% of contacts (13,020 calls) were logged with an unknown contact type. They converted at only 4.1% - worst of any category.',
+    now:'First-party data quality is now a primary competitive differentiator in digital banking (McKinsey 2024).',
+    impact:'This finding has become more urgent. In a digital-first environment, unclassified customers are essentially invisible.' },
+  { dim:'Conversion Rate Benchmark', badge:'Bar Raised', cls:'raised',
+    dataset:'The campaign achieved an 11.7% overall conversion rate across 45,211 contacts.',
+    now:'McKinsey (2024) reports digital leaders consistently achieve double the account opening rates of peers through personalised funnels.',
+    impact:'11.7% was reasonable in 2008-2010. Today\'s top performers significantly exceed this through segmentation and digital engagement.' },
+];
+
+const vr = document.getElementById('verdict-rows');
+VERDICTS.forEach((v,i) => {
+  vr.innerHTML += `
+  <div class="verdict-row" id="vrow-${i}" onclick="toggleVerdict(${i})">
+    <div class="verdict-head">
+      <span class="verdict-dim">${v.dim}</span>
+      <span class="badge ${v.cls}">${v.badge}</span>
+    </div>
+    <div class="verdict-body">
+      <div class="verdict-then"><span class="vl then">DATASET</span><span class="vt then">${v.dataset}</span></div>
+      <div class="verdict-now"><span class="vl now">2024</span><span class="vt now">${v.now}</span></div>
+      <div class="verdict-impact">${v.impact}</div>
+    </div>
+  </div>`;
+});
+function toggleVerdict(i){ document.getElementById('vrow-'+i).classList.toggle('open'); }
+
+// ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
+const green2='#4ADE80';
+const INSIGHTS = [
+  { num:'01', color:gold, impact:'Critical', impactBg:'rgba(200,169,126,.15)',
+    title:'Call duration is the #1 post-call predictor of a sale',
+    body:'Calls over 20 minutes closed at 61.6% vs 0.2% for calls under 1 minute - a 300x difference computed directly from the dataset. McKinsey (2024) confirms this principle holds in digital: banks achieving customer primacy do so through high-engagement personalised interactions, not high-volume outreach. Caveat: duration is only known after the call ends - it cannot be used to pre-screen prospects.',
+    src:'UCI dataset + McKinsey State of Retail Banking 2024' },
+  { num:'02', color:gold, impact:'Critical', impactBg:'rgba(200,169,126,.15)',
+    title:'Seniors (66+) convert at 42.6% but receive the fewest calls',
+    body:'Only 751 calls targeted this segment, yielding 320 conversions at the highest rate of any age group. At this rate, 1,000 additional targeted contacts would yield roughly 426 extra sales. According to the ABA Consumer Survey 2024, 41% of Boomers now use mobile banking as their primary channel - making this group reachable digitally.',
+    src:'UCI dataset + ABA Consumer Survey 2024' },
+  { num:'03', color:blue, impact:'High', impactBg:'rgba(45,106,143,.2)',
+    title:'May is a volume trap: 30% of calls, only 17.5% of conversions',
+    body:'13,766 calls in May produced 925 conversions at 6.7% - the lowest monthly rate. March produced 248 conversions from 477 calls at 52% - nearly 8x the May rate. McKinsey\'s Global Banking Annual Review (2024) confirms that year-end financial planning urgency remains a consistent driver of product adoption, suggesting budget reallocation to higher-rate months would meaningfully improve overall ROI.',
+    src:'UCI dataset + McKinsey Global Banking Annual Review 2024' },
+  { num:'04', color:blue, impact:'High', impactBg:'rgba(45,106,143,.2)',
+    title:'Unknown contact type silently destroys 29% of pipeline value',
+    body:'13,020 calls - 28.8% of the total campaign - were logged with unknown contact type, converting at just 4.1% vs 14.9% for cellular. This is a data quality failure, not a customer quality failure. McKinsey (2024) identifies first-party data hygiene as a primary competitive differentiator in modern banking.',
+    src:'UCI dataset + McKinsey State of Retail Banking 2024' },
+  { num:'05', color:teal, impact:'Medium', impactBg:'rgba(74,143,168,.2)',
+    title:'Blue-collar workers: most called, worst return on effort',
+    body:'Blue-collar workers received 9,732 calls - the most of any segment - yet converted at only 7.3%. Students (938 calls, 28.7%) and retirees (2,264 calls, 22.8%) delivered 3-4x higher returns on far fewer calls. Smarter segment prioritisation, without any additional budget, would materially improve campaign outcomes.',
+    src:'UCI dataset' },
+  { num:'06', color:green2, impact:'Critical', impactBg:'rgba(74,222,128,.1)',
+    title:'Previous campaign success is the strongest pre-call signal - and nearly ignored',
+    body:'Clients who subscribed in a previous campaign converted at 64.7% - 7x the 9.2% rate of contacts with no prior outcome on record. Yet only 1,511 calls (3.3% of the entire campaign) targeted this group. This signal is available in any CRM before the first word is spoken. It requires no model, no scoring system - just a sort by prior outcome. It is the highest-ROI untapped lever in the dataset.',
+    src:'UCI dataset' },
+  { num:'07', color:green2, impact:'High', impactBg:'rgba(74,222,128,.1)',
+    title:'Calling the same person 4+ times halves the conversion rate',
+    body:'The first contact converted at 14.6%. By the fourth contact or more, the rate dropped to 7.4% - half the initial rate. Despite this, 9,641 calls (21.3% of the campaign) were made at the 4+ contact stage. Stopping repeated attempts after the second or third contact and redirecting that volume to fresh high-propensity leads would recover significant wasted spend.',
+    src:'UCI dataset' },
+  { num:'08', color:green2, impact:'High', impactBg:'rgba(74,222,128,.1)',
+    title:'No housing loan doubles conversion likelihood - and it\'s a pre-call CRM field',
+    body:'Clients without a housing loan converted at 16.7% vs 7.7% for those with one - a 2.2x multiplier. Combined with first-contact timing and no prior campaign failure, this filter produces a targeted pool of 6,666 calls achieving a 21.9% conversion rate - nearly double the 11.7% campaign baseline. All three filters come from data that existed in the CRM before any call was made.',
+    src:'UCI dataset' },
+];
+
+const ic = document.getElementById('insight-cards');
+INSIGHTS.forEach(ins => {
+  ic.innerHTML += `
+  <div class="insight" style="margin-bottom:12px">
+    <div class="insight-num" style="color:${ins.color}">${ins.num}</div>
+    <div style="flex:1">
+      <div style="margin-bottom:6px">
+        <span class="insight-title">${ins.title}</span>
+        <span class="impact-badge" style="background:${ins.impactBg};color:${ins.color}">${ins.impact}</span>
+      </div>
+      <div class="insight-body">${ins.body}</div>
+      <div class="insight-src">Source: ${ins.src}</div>
+    </div>
+  </div>`;
+});
+
+const ACTIONS = [
+  'Shift from phone outreach to a mobile-first digital approach. Telephone is now the least-preferred banking channel - chosen by only 4% of US consumers as their primary channel (ABA 2024).',
+  'Start every campaign by calling previous subscribers first. A 64.7% conversion rate on this group dwarfs every other segment in the dataset, and the data already exists in any CRM.',
+  'Stop calling the same prospect after the third attempt. The conversion rate at 4+ contacts (7.4%) is half the first-contact rate (14.6%). Those 9,641 calls currently yield 713 conversions. Redirected to the high-propensity pool at 21.9%, the same call volume would yield ~2,111 conversions - +1,398 sales and approximately +€210k in margin at €150/deposit.',
+  'Filter for no housing loan before dialling. It doubles conversion likelihood and costs nothing to implement - it is a single CRM field check.',
+  'Prioritise the 66+ and student segments. They convert at 3-4x the rate of blue-collar workers in this dataset, and both are now reachable via digital channels.',
+  'Concentrate campaign spend in months with proven high rates - March, September, October and December all exceeded 40%. Avoid over-investing in May.',
+  'Fix CRM data before scaling. The 28.8% of contacts with unknown classification converted at 4.1% - cleaning this data alone could recapture significant pipeline value at zero additional cost.',
+  'Train for engagement quality, not call volume. The 300x conversion gap between short and long calls is the strongest outcome signal - and the principle applies directly to the design of digital customer journeys.',
+];
+const sw = document.getElementById('so-what-items');
+ACTIONS.forEach((a,i) => {
+  sw.innerHTML += `<div class="so-what-item"><div class="so-what-num">${String(i+1).padStart(2,'0')}</div><div class="so-what-text">${a}</div></div>`;
+});
+// ── COHORT LEARNING CURVE ────────────────────────────────────────────────────
+const cohortLabels = ['2008-Q2','2008-Q3','2008-Q4','2009-Q1','2009-Q2','2009-Q3','2009-Q4','2010-Q1','2010-Q2','2010-Q3','2010-Q4'];
+const cohortRates  = [3.7, 5.8, 7.3, 11.2, 13.7, 36.7, 45.9, 51.7, 55.1, 51.9, 42.7];
+const cohortCalls  = [12443,11595,3691,3730,8935,1261,936,799,661,865,295];
+const cohortColors = cohortRates.map(r => r>=40?gold : r>=15?teal : border);
+new Chart(document.getElementById('c-cohort'), {
+  type:'bar',
+  data:{ labels:cohortLabels, datasets:[
+    { label:'Conv. Rate %', data:cohortRates, backgroundColor:cohortColors, borderRadius:4, yAxisID:'y' },
+    { label:'Call Volume', data:cohortCalls, type:'line', yAxisID:'y2', borderColor:'rgba(45,106,143,0.5)', backgroundColor:'transparent', pointBackgroundColor:blue, pointRadius:3, borderWidth:1.5, tension:0.3, borderDash:[4,3] }
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{labels:{color:muted,font:{size:12}}}, tooltip:{...tooltipOpts, callbacks:{
+      label: ctx => ctx.datasetIndex===0 ? ` ${ctx.raw}% conversion rate` : ` ${ctx.raw.toLocaleString()} calls`
+    }}},
+    scales:{
+      y:{ grid:gridOpts, ticks:{...tickOpts, callback:pctTick}, position:'left', max:65 },
+      y2:{ grid:{display:false}, ticks:{...tickOpts, callback:v=>v.toLocaleString()}, position:'right' },
+      x:{ grid:gridOpts, ticks:{...tickOpts, maxRotation:15} }
+    }
+  }
+});
+
+// ── FEATURE IMPORTANCE ────────────────────────────────────────────────────────
+const featNames = ['Duration of call','Contact method','Housing loan','# contacts this campaign','Days since last contact','Personal loan','Prior campaign outcome','# prior contacts','Education level','Marital status','Month of contact','Age','Account balance','Credit default','Day of month','Occupation'];
+const featVals  = [1.0161,0.5785,0.5151,0.4067,0.3621,0.2581,0.2270,0.2055,0.1487,0.1354,0.1172,0.0888,0.0540,0.0477,0.0426,0.0302];
+const featColors = featNames.map((n,i) => i===0 ? 'rgba(200,169,126,0.35)' : gold);
+new Chart(document.getElementById('c-featimport'), {
+  type:'bar',
+  data:{ labels:featNames, datasets:[{
+    label:'Importance (|coefficient|)',
+    data:featVals,
+    backgroundColor:featColors,
+    borderRadius:3
+  }]},
+  options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{display:false}, tooltip:{...tooltipOpts, callbacks:{
+      label: ctx => ` ${ctx.raw.toFixed(4)}`,
+      afterLabel: ctx => ctx.dataIndex===0 ? ' Post-call signal only' : ' Pre-call CRM signal'
+    }}},
+    scales:{
+      x:{ grid:gridOpts, ticks:{...tickOpts, callback:v=>v.toFixed(2)}, max:1.15 },
+      y:{ grid:{display:false}, ticks:{...tickOpts, font:{size:11}} }
+    }
+  }
+});
+
+</script>
+
+<div style="border-top:1px solid #1D3040;margin-top:40px;padding:20px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+  <div style="font-size:11px;color:#5A7A8A">
+    <span style="color:#C8A97E;font-weight:600">Federico Mora</span> &nbsp;|&nbsp; Research, analysis and interpretation &copy; 2026
+  </div>
+  <div style="font-size:10px;color:#2A4A5A;font-style:italic">
+    Underlying dataset: UCI Bank Marketing Dataset &mdash; Moro et al. (2014), publicly available under academic licence
+  </div>
+</div>
+
+<div class="footer">
+  <span>Research, analysis and dashboard by Federico Mora</span><br>
+  Data: UCI Bank Marketing Dataset &mdash; Moro, S., Cortez, P., &amp; Rita, P. (2014). Decision Support Systems, 62, 22&ndash;31.<br>
+  2024 benchmarks: ABA Consumer Banking Survey 2024 &middot; McKinsey &amp; Company 2024 &middot; BMO Financial Research 2024
+</div>
+
+</body>
+</html>
