@@ -4,7 +4,7 @@ Interactive dashboard analysing 45,211 outbound bank sales calls (2008–2010).
 Built on the UCI Bank Marketing Dataset by Moro et al. (2014).
 
 ## Live dashboard
-[View here](https://federicomorazanotti-bit.github.io/bank-campaign-intelligence)
+[View here](https://github.com/federicomorazanotti-bit/bank-campaign-intelligence/blob/57e6cf6fa3cda1573901bcb45efdc164f57c8bbb/Bank%20Campaign%20Intelligence%20-%20Federico%20Mora.html)
 
 ## What's in this repo
 - `index.html` — full interactive dashboard (7 tabs, Chart.js)
